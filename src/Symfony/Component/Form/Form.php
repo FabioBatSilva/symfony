@@ -445,13 +445,14 @@ class Form implements \IteratorAggregate, FormInterface
     /**
      * Binds data to the field, transforms and validates it.
      *
-     * @param string|array $clientData The data
+     * @param string|array $clientData  The data
+     * @param array $filter|null        If given then will filter fields to bind data
      *
      * @return Form The current form
      *
      * @throws UnexpectedTypeException
      */
-    public function bind($clientData)
+    public function bind($clientData, array $filter = array())
     {
         if ($this->readOnly) {
             $this->bound = true;
@@ -496,8 +497,12 @@ class Form implements \IteratorAggregate, FormInterface
             }
 
             foreach ($clientData as $name => $value) {
+                if (!empty($filter) && !in_array($name, $filter)) {
+                    unset ($clientData[$name]);
+                    continue;
+                }
                 if ($this->has($name)) {
-                    $this->children[$name]->bind($value);
+                    $this->children[$name]->bind($value, isset($filter[$name]) ? $filter[$name] : null);
                 } else {
                     $extraData[$name] = $value;
                 }
@@ -566,12 +571,12 @@ class Form implements \IteratorAggregate, FormInterface
      * transformed and written into the form data (an object or an array).
      *
      * @param Request $request    The request to bind to the form
-     *
+     * @param array $filter|null  If given then will filter fields to bind data
      * @return Form This form
      *
      * @throws FormException if the method of the request is not one of GET, POST or PUT
      */
-    public function bindRequest(Request $request)
+    public function bindRequest(Request $request, array $filter = array())
     {
         // Store the bound data in case of a post request
         switch ($request->getMethod()) {
@@ -589,7 +594,7 @@ class Form implements \IteratorAggregate, FormInterface
                 throw new FormException(sprintf('The request method "%s" is not supported', $request->getMethod()));
         }
 
-        return $this->bind($data);
+        return $this->bind($data, $filter);
     }
 
     /**

@@ -169,6 +169,36 @@ class FormTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($form->isBound());
     }
 
+    public function testFilterFieldsBind()
+    {
+        $childUser  = $this->getMockForm('user');
+        $childUrl   = $this->getMockForm('url');
+
+        $this->form->add($childUser);
+        $this->form->add($childUrl);
+
+        $childUser->expects($this->exactly(2))->method('bind');
+        $childUrl->expects($this->once())->method('bind');
+
+        $this->form->bind(array(
+            'user'  => 'fabiobatsilva',
+            'url'   => 'fabiosilva.info'
+        ));
+
+        $this->form->bind(array(
+            'user'  => 'FabioBatSilva'
+        ), array('user'));
+
+
+        $this->markTestIncomplete();
+
+
+        $this->assertEquals(array(
+            'user'  => 'FabioBatSilva',
+            'url'   => 'fabiosilva.info'
+        ), $this->form->getData());
+    }
+
     public function testNeverRequiredIfParentNotRequired()
     {
         $parent = $this->getBuilder()->setRequired(false)->getForm();
