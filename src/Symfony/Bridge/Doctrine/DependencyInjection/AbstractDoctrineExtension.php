@@ -329,7 +329,7 @@ abstract class AbstractDoctrineExtension extends Extension
             case 'service':
                 $container->setAlias($cacheDriverServiceId, new Alias($cacheDriver['id'], false));
 
-                return;
+                return $cacheDriverServiceId;
             case 'memcache':
                 $memcacheClass = !empty($cacheDriver['class']) ? $cacheDriver['class'] : '%'.$this->getObjectManagerElementName('cache.memcache.class').'%';
                 $memcacheInstanceClass = !empty($cacheDriver['instance_class']) ? $cacheDriver['instance_class'] : '%'.$this->getObjectManagerElementName('cache.memcache_instance.class').'%';
@@ -368,6 +368,26 @@ abstract class AbstractDoctrineExtension extends Extension
                 ));
                 $container->setDefinition($this->getObjectManagerElementName(sprintf('%s_redis_instance', $objectManagerName)), $redisInstance);
                 $cacheDef->addMethodCall('setRedis', array(new Reference($this->getObjectManagerElementName(sprintf('%s_redis_instance', $objectManagerName)))));
+                break;
+            case 'riak':
+                $riakClass       = !empty($cacheDriver['class']) ? $cacheDriver['class'] : '%'.$this->getObjectManagerElementName('cache.riak.class').'%';
+                $riakConnClass   = !empty($cacheDriver['instance_class']) ? $cacheDriver['instance_class'] : '%'.$this->getObjectManagerElementName('cache.riak_instance.class').'%';
+                $riakBucketClass = !empty($cacheDriver['keyspace_class']) ? $cacheDriver['keyspace_class'] : '%'.$this->getObjectManagerElementName('cache.riak_keyspace.class').'%';
+                $riakBucketName  = !empty($cacheDriver['keyspace_name']) ? $cacheDriver['keyspace_name'] : str_replace('.', '_', $cacheDriverServiceId);
+                $riakHost        = !empty($cacheDriver['host']) ? $cacheDriver['host'] : '%'.$this->getObjectManagerElementName('cache.riak_host').'%';
+                $riakPort        = !empty($cacheDriver['port']) ? $cacheDriver['port'] : '%'.$this->getObjectManagerElementName('cache.riak_port').'%';
+                $riakConnId      = $this->getObjectManagerElementName(sprintf('%s_riak_connection', $objectManagerName));
+                $riakBucketId    = $this->getObjectManagerElementName(sprintf('%s_riak_bucket', $objectManagerName));
+                $riakConnDef     = new Definition($riakConnClass, array($riakHost, $riakPort));
+                $riakBucketDef   = new Definition($riakBucketClass, array($riakBucketName));
+                $cacheDef        = new Definition($riakClass, array(new Reference($riakBucketId)));
+
+                $container->setDefinition($riakConnId, $riakConnDef);
+                $container->setDefinition($riakBucketId, $riakBucketDef)
+                    ->setFactoryService($riakConnId)
+                    ->setFactoryMethod('getBucket')
+                ;
+
                 break;
             case 'apc':
             case 'array':
